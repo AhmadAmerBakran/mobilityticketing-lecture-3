@@ -1,0 +1,105 @@
+SET
+REFRESH MATERIALIZED VIEW
+BASELINE - direct query
+ operator_id | revenue_date | captured_amount | captured_payments
+-------------+--------------+-----------------+-------------------
+ OP-BUS      | 2026-04-29   |           36.00 |                 1
+ OP-METRO    | 2026-04-29   |           36.00 |                 1
+(2 rows)
+
+BASELINE - function
+ operator_id | revenue_date | captured_amount | captured_payments
+-------------+--------------+-----------------+-------------------
+ OP-BUS      | 2026-04-29   |           36.00 |                 1
+ OP-METRO    | 2026-04-29   |           36.00 |                 1
+(2 rows)
+
+BASELINE - materialized view
+ operator_id | revenue_date | captured_amount | captured_payments
+-------------+--------------+-----------------+-------------------
+ OP-BUS      | 2026-04-29   |           36.00 |                 1
+ OP-METRO    | 2026-04-29   |           36.00 |                 1
+(2 rows)
+
+BASELINE - trigger summary
+ operator_id | revenue_date | captured_amount | captured_payments
+-------------+--------------+-----------------+-------------------
+ OP-BUS      | 2026-04-29   |               0 |                 0
+ OP-METRO    | 2026-04-29   |               0 |                 0
+(2 rows)
+
+INSERT 0 1
+CASE 1 - captured insert - direct/function/materialized/trigger
+   approach   | expected_amount | captured_amount | captured_payments
+--------------+-----------------+-----------------+-------------------
+ direct       |              72 |           72.00 |                 2
+ function     |              72 |           72.00 |                 2
+ materialized |              72 |           36.00 |                 1
+ trigger      |              72 |              36 |                 1
+(4 rows)
+
+INSERT 0 1
+CASE 2 - failed insert
+   approach   | captured_amount | captured_payments
+--------------+-----------------+-------------------
+ direct       |           72.00 |                 2
+ function     |           72.00 |                 2
+ materialized |           36.00 |                 1
+ trigger      |              36 |                 1
+(4 rows)
+
+UPDATE 1
+CASE 3 - Failed to Captured
+   approach   | captured_amount | captured_payments
+--------------+-----------------+-------------------
+ direct       |          122.00 |                 3
+ function     |          122.00 |                 3
+ materialized |           36.00 |                 1
+ trigger      |              36 |                 1
+(4 rows)
+
+UPDATE 1
+CASE 4 - Captured to Refunded
+   approach   | captured_amount | captured_payments
+--------------+-----------------+-------------------
+ direct       |           86.00 |                 2
+ function     |           86.00 |                 2
+ materialized |           36.00 |                 1
+ trigger      |              36 |                 1
+(4 rows)
+
+DELETE 1
+CASE 5 - delete captured test payment
+   approach   | captured_amount | captured_payments
+--------------+-----------------+-------------------
+ direct       |           36.00 |                 1
+ function     |           36.00 |                 1
+ materialized |           36.00 |                 1
+ trigger      |              36 |                 1
+(4 rows)
+
+INSERT 0 1
+CASE 6 - duplicate external reference
+   approach   | captured_amount | captured_payments
+--------------+-----------------+-------------------
+ direct       |           72.00 |                 2
+ function     |           72.00 |                 2
+ materialized |           36.00 |                 1
+ trigger      |              72 |                 2
+(4 rows)
+
+REFRESH MATERIALIZED VIEW
+ operator_id | revenue_date | captured_amount | captured_payments
+-------------+--------------+-----------------+-------------------
+ OP-BUS      | 2026-04-29   |           36.00 |                 1
+ OP-METRO    | 2026-04-29   |           72.00 |                 2
+(2 rows)
+
+REBUILD TRIGGER SUMMARY FROM AUTHORITY
+TRUNCATE TABLE
+INSERT 0 2
+ operator_id | revenue_date | captured_amount | captured_payments
+-------------+--------------+-----------------+-------------------
+ OP-BUS      | 2026-04-29   |           36.00 |                 1
+ OP-METRO    | 2026-04-29   |           72.00 |                 2
+(2 rows)
