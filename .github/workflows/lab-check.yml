@@ -1,0 +1,46 @@
+name: lab-check
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  postgres-lab:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: mobility
+          POSTGRES_USER: mobility
+          POSTGRES_PASSWORD: mobility
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mobility -d mobility"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    env:
+      PGPASSWORD: mobility
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialise database
+        run: |
+          psql -h localhost -U mobility -d mobility -v ON_ERROR_STOP=1 -f database/postgres/init/001_relational_baseline.sql
+          psql -h localhost -U mobility -d mobility -v ON_ERROR_STOP=1 -f database/postgres/init/002_seed.sql
+          psql -h localhost -U mobility -d mobility -v ON_ERROR_STOP=1 -f database/postgres/init/010_ticketing_draft.sql
+          psql -h localhost -U mobility -d mobility -v ON_ERROR_STOP=1 -f database/postgres/init/011_ticketing_seed.sql
+
+      - name: Apply reporting objects
+        run: |
+          psql -h localhost -U mobility -d mobility -v ON_ERROR_STOP=1 -f database/postgres/migrations/020_reporting_function.sql
+          psql -h localhost -U mobility -d mobility -v ON_ERROR_STOP=1 -f database/postgres/migrations/021_daily_revenue_trigger.sql
+          psql -h localhost -U mobility -d mobility -v ON_ERROR_STOP=1 -f database/postgres/migrations/022_daily_captured_revenue.sql
+
+      - name: Run reporting cases
+        run: |
+          psql -h localhost -U mobility -d mobility -v ON_ERROR_STOP=1 -f database/postgres/experiments/reporting_cases.sql
